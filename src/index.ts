@@ -1,33 +1,40 @@
-import express, { Express } from 'express';
+import express, { Express, Request, Response } from 'express';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { addReading, getReading } from './database';
+import { createMetric, getMetrics } from './controllers/metricController';
 
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
-const app: Express = express();
+export const app: Express = express();
 
 app.use(helmet());
 app.use(express.text());
 app.use(express.urlencoded({ extended: true }));
 
-app.post('/data', async (req, res) => {
-  // TODO: parse incoming data, and save it to the database
-  // data is of the form:
-  //  {timestamp} {name} {value}
+app.post('/data', async (req: Request, res: Response) => {
 
-  // addReading(...)
-
-  return res.json({ success: false });
+  const result = createMetric(req.body)
+  return res.json({ success: result });
 });
 
 app.get('/data', async (req, res) => {
-  // TODO: check what dates have been requested, and retrieve all data within the given range
 
-  // getReading(...)
+  const { from, to } = req.query;
+  if (!from || !to)
+    return res.status(400).json({ error: 'Missing date range' });
 
-  return res.json({ success: false });
+  try {
+    const result = getMetrics(from as string, to as string)
+    return res.json(result);
+  }
+  catch (error) {
+    return res.status(400).json({
+      error:
+        error instanceof Error ? error.message : "Unknown Error occured"
+    });
+  }
 });
 
 app.listen(PORT, () => console.log(`Running on port ${PORT} ⚡`));
